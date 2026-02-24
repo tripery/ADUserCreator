@@ -60,6 +60,8 @@ if ($srcDir -ne (Resolve-Path $distDir).Path) {
 $out = Join-Path $distDir 'ADUserCreator.exe'
 $icon = Join-Path $projectRoot 'assets\icon.ico'
 $useIcon = Test-Path $icon
+$releaseDir = Join-Path $projectRoot 'release'
+$installerScript = Join-Path $PSScriptRoot 'ADUserCreator.iss'
 
 if ($useIcon) {
     ps2exe $srcMain $out -noConsole -x64 -requireAdmin -icon $icon -title 'AD User Creator' -verbose
@@ -67,5 +69,62 @@ if ($useIcon) {
     ps2exe $srcMain $out -noConsole -x64 -requireAdmin -title 'AD User Creator' -verbose
 }
 
+if (-not (Test-Path $installerScript)) {
+    throw "Не знайдено Inno Setup script: $installerScript"
+}
+
+if (-not (Test-Path $releaseDir)) {
+    New-Item -ItemType Directory -Path $releaseDir | Out-Null
+}
+
+$requiredForInstaller = @(
+    (Join-Path $distDir 'ADUserCreator.exe'),
+    (Join-Path $distDir 'main.ps1'),
+    (Join-Path $distDir 'ad'),
+    (Join-Path $distDir 'common'),
+    (Join-Path $distDir 'excel'),
+    (Join-Path $distDir 'ui')
+)
+
+foreach ($path in $requiredForInstaller) {
+    if (-not (Test-Path $path)) {
+        throw "Для інсталятора відсутній файл/папка: $path"
+    }
+}
+
+$isccCandidates = @()
+$isccCommand = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+if ($isccCommand) {
+    $isccCandidates += $isccCommand.Source
+}
+
+foreach ($candidate in @(
+    (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
+    (Join-Path $env:ProgramFiles 'Inno Setup 6\ISCC.exe')
+)) {
+    if ($candidate -and (Test-Path $candidate)) {
+        $isccCandidates += $candidate
+    }
+}
+
+$isccExe = $isccCandidates | Select-Object -Unique | Select-Object -First 1
+if (-not $isccExe) {
+    throw "Не знайдено ISCC.exe (Inno Setup 6). Встановіть Inno Setup і повторіть збірку."
+}
+
+$appVersion = Get-Date -Format 'yyyy.MM.dd.HHmm'
+$isccArgs = @(
+    "/DSourceDist=`"$distDir`"",
+    "/DOutputDir=`"$releaseDir`"",
+    "/DAppVersion=`"$appVersion`"",
+    "`"$installerScript`""
+)
+
+& $isccExe @isccArgs
+if ($LASTEXITCODE -ne 0) {
+    throw "ISCC.exe завершився з кодом $LASTEXITCODE"
+}
+
 Write-Host "DONE: $out"
 Write-Host "Runtime files copied to: $distDir"
+Write-Host "Installer created in: $releaseDir"

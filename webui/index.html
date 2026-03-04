@@ -1,0 +1,162 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AD User Creator Web UI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">👥</div>
+        <div class="brand-text">Створення користувачів AD</div>
+      </div>
+
+      <nav class="menu">
+        <button class="menu-item active" type="button">
+          <span class="menu-icon">⌂</span>
+          <span>Головна</span>
+        </button>
+        <button class="menu-item" type="button">
+          <span class="menu-icon">👤</span>
+          <span>Користувачі</span>
+        </button>
+        <button class="menu-item" type="button">
+          <span class="menu-icon">👥</span>
+          <span>Групи</span>
+        </button>
+      </nav>
+
+      <div class="menu-footer">
+        <button class="menu-item" type="button">
+          <span class="menu-icon">⚙</span>
+          <span>Налаштування</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="topbar-left">
+          <h1>Створення користувачів AD</h1>
+          <p>Excel → OU → Групи → Preview → Створення</p>
+        </div>
+        <div class="topbar-right">
+          <button class="icon-btn" type="button" aria-label="Сповіщення">🔔</button>
+          <button class="icon-btn" type="button" aria-label="Оповіщення">🔔</button>
+          <button class="profile" type="button">
+            <span class="avatar">A</span>
+            <span class="profile-name">admin</span>
+            <span class="caret">⌄</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="card">
+          <h2>Завантажте Excel-файл зі списком користувачів</h2>
+
+          <div class="field-block">
+            <label class="label">Excel файл (*.xlsx)</label>
+            <div class="file-row" id="fileRow">
+              <label class="btn btn-primary file-pick" for="excelFile">
+                <span>📄</span>
+                <span>Вибрати файл</span>
+              </label>
+              <input id="excelFile" type="file" accept=".xlsx" hidden />
+              <div class="file-pill" id="fileName">Файл не вибрано</div>
+              <button class="btn btn-danger" type="button" id="clearFile">Видалити</button>
+            </div>
+          </div>
+
+          <div class="field-block">
+            <label class="label" for="ouSelect">Виберіть організаційний підрозділ (OU)</label>
+            <div class="select-wrap">
+              <select id="ouSelect" class="input-select">
+                <option>Студенти / Інженерний факультет / Комп'ютерні науки</option>
+                <option>Студенти / Економічний факультет</option>
+                <option>Працівники / Деканат</option>
+                <option>Працівники / IT-відділ</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-block">
+            <label class="label">Додати користувачів до груп (опціонально)</label>
+            <div class="chips-input">
+              <div class="chips-left">
+                <select id="groupPreset" class="chip-select" aria-label="Шаблон груп">
+                  <option value="">Студенти</option>
+                  <option value="students">Студенти</option>
+                  <option value="staff">Працівники</option>
+                </select>
+                <input id="groupInput" class="chip-text" type="text" placeholder="Введіть групу і натисніть Enter" />
+              </div>
+              <button class="add-chip" type="button" id="addGroupBtn" aria-label="Додати групу">❯</button>
+            </div>
+            <div class="chip-list" id="chipList"></div>
+          </div>
+
+          <div class="field-block">
+            <label class="label">Політика паролів</label>
+            <label class="checkbox-row">
+              <input id="neverExpire" type="checkbox" />
+              <span>Пароль не має терміну дії</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header-row">
+            <h2>Попередній перегляд користувачів</h2>
+            <div class="muted" id="previewMeta">Показано 1-4 з 4 користувачів</div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Прізвище Ім'я По батькові</th>
+                  <th>Логін</th>
+                  <th>E-mail</th>
+                  <th>Групи</th>
+                </tr>
+              </thead>
+              <tbody id="previewTableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="pager">
+            <button type="button" class="pager-btn">‹</button>
+            <button type="button" class="pager-btn active">1</button>
+            <button type="button" class="pager-btn">›</button>
+          </div>
+        </div>
+
+        <div class="card action-bar">
+          <div class="action-bar-spacer"></div>
+          <button class="btn btn-success btn-lg" type="button" id="createUsersBtn">
+            <span>👤＋</span>
+            <span>Створити користувачів</span>
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-header-row">
+            <h2>Журнал виконання</h2>
+            <button class="btn btn-ghost" type="button" id="clearLogBtn">Очистити</button>
+          </div>
+          <pre class="log-box" id="logBox"></pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

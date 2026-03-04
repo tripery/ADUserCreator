@@ -1,0 +1,5 @@
+﻿{
+  "terminal.integrated.defaultProfile.windows": "Windows PowerShell",
+  "powershell.powerShellDefaultVersion": "Windows PowerShell (x64)",
+  "powershell.enableProfileLoading": false
+}

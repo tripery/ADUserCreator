@@ -15,10 +15,11 @@ $script:ProjectRoot = Resolve-ProjectRoot
 
 function Initialize-AppDependencies {
     Import-Module ActiveDirectory -ErrorAction Stop
-    . (Join-Path $script:ProjectRoot 'src\ad\Transliteration.ps1')
-    . (Join-Path $script:ProjectRoot 'src\ad\Naming.ps1')
-    . (Join-Path $script:ProjectRoot 'src\common\Password.ps1')
 }
+
+. (Join-Path $script:ProjectRoot 'src\ad\Transliteration.ps1')
+. (Join-Path $script:ProjectRoot 'src\ad\Naming.ps1')
+. (Join-Path $script:ProjectRoot 'src\common\Password.ps1')
 
 function Add-CorsHeaders {
     param([Parameter(Mandatory)]$Response)
@@ -54,10 +55,11 @@ function Write-TextResponse {
 
 function Read-JsonBody {
     param([Parameter(Mandatory)]$Request)
-    $reader = New-Object System.IO.StreamReader($Request.InputStream, $Request.ContentEncoding)
+    # Browser JSON payload is UTF-8; HttpListener ContentEncoding may be incorrect when charset is omitted.
+    $reader = New-Object System.IO.StreamReader($Request.InputStream, [System.Text.Encoding]::UTF8)
     try { $body = $reader.ReadToEnd() } finally { $reader.Dispose() }
     if ([string]::IsNullOrWhiteSpace($body)) { return @{} }
-    return ($body | ConvertFrom-Json -Depth 12)
+    return ($body | ConvertFrom-Json)
 }
 
 function Normalize-Text {
@@ -128,10 +130,14 @@ function Invoke-AdUserCreate {
         Path = $OU
         Enabled = $true
         AccountPassword = $securePassword
-        ChangePasswordAtLogon = $true
     }
     if ($Preview.middleName) { $newParams['OtherName'] = $Preview.middleName }
-    if ($PasswordNeverExpires) { $newParams['PasswordNeverExpires'] = $true }
+    if ($PasswordNeverExpires) {
+        $newParams['PasswordNeverExpires'] = $true
+        $newParams['ChangePasswordAtLogon'] = $false
+    } else {
+        $newParams['ChangePasswordAtLogon'] = $true
+    }
     New-ADUser @newParams
     foreach ($groupSam in $GroupsToAdd) { if ($groupSam) { Add-ADGroupMember -Identity $groupSam -Members $Preview.login -ErrorAction Stop } }
     [pscustomobject]@{ fullName = $Preview.fullName; login = $Preview.login; email = $Preview.email; password = $password; status = 'created' }
@@ -187,7 +193,7 @@ function Handle-ApiRequest {
                     try { $preview.Add((New-PreviewUserRecord -UserItem $u -DomainSuffix $domainSuffix -OU $ou -CheckUniqueness)) }
                     catch { $errors.Add([pscustomobject]@{ fullName = (Normalize-Text $u.fullName); sourceRow = $u.sourceRow; error = $_.Exception.Message }) }
                 }
-                Write-JsonResponse -Context $Context -Data ([pscustomobject]@{ ok = $true; preview = @($preview); errors = @($errors) })
+                Write-JsonResponse -Context $Context -Data ([pscustomobject]@{ ok = $true; preview = $preview.ToArray(); errors = $errors.ToArray() })
                 return
             }
             'POST /api/users/create' {
@@ -214,7 +220,7 @@ function Handle-ApiRequest {
                         $errors.Add([pscustomobject]@{ fullName = (Normalize-Text $u.fullName); sourceRow = $u.sourceRow; error = $_.Exception.Message })
                     }
                 }
-                Write-JsonResponse -Context $Context -Data ([pscustomobject]@{ ok = $true; created = @($results); errors = @($errors) })
+                Write-JsonResponse -Context $Context -Data ([pscustomobject]@{ ok = $true; created = $results.ToArray(); errors = $errors.ToArray() })
                 return
             }
             default {
@@ -229,10 +235,16 @@ function Handle-ApiRequest {
 
 Initialize-AppDependencies
 $listener = New-Object System.Net.HttpListener
-$listener.Prefixes.Add("http://localhost:$Port/")
-$listener.Prefixes.Add("http://127.0.0.1:$Port/")
-$listener.Start()
+$listener.Prefixes.Add("http://+:$Port/")
+try {
+    $listener.Start()
+} catch [System.Net.HttpListenerException] {
+    $currentUser = "$env:USERDOMAIN\$env:USERNAME"
+    $urlAclCmd = "netsh http add urlacl url=http://+:$Port/ user=`"$currentUser`""
+    throw "Не вдалося запустити HttpListener на http://+:$Port/. Найчастіше причина: URL ACL не налаштований. Запустіть PowerShell від адміністратора і виконайте: $urlAclCmd"
+}
 Write-Host "ADUserCreator Web API started on http://localhost:$Port/api/health"
+Write-Host "LAN access: http://10.21.2.105:$Port/api/health"
 Write-Host 'Press Ctrl+C to stop'
 Write-Host 'NOTE: src/ad/UserProvision.ps1 is currently broken in repo; backend uses inline create logic.'
 try {

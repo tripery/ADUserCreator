@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  webui:
+    build:
+      context: ./webui-react
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - API_PROXY_TARGET=http://host.docker.internal:8787
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

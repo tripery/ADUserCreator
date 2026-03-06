@@ -1,7 +1,7 @@
-﻿import { startTransition, useEffect, useRef, useState } from 'react'
+﻿import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 
-const API_BASE = '/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
 
 const initialLogs = [
   { level: 'OK', message: 'React/Vite UI ініціалізовано' },
@@ -16,6 +16,9 @@ export default function App() {
   const [selectedOu, setSelectedOu] = useState('')
   const [selectedGroups, setSelectedGroups] = useState([])
   const [groupInput, setGroupInput] = useState('')
+  const [ouSearch, setOuSearch] = useState('')
+  const [expandedOuNodes, setExpandedOuNodes] = useState(() => new Set())
+  const [isOuDropdownOpen, setIsOuDropdownOpen] = useState(false)
   const [passwordNeverExpires, setPasswordNeverExpires] = useState(false)
   const [sourceUsers, setSourceUsers] = useState([])
   const [previewRows, setPreviewRows] = useState([])
@@ -26,10 +29,37 @@ export default function App() {
   const [createResults, setCreateResults] = useState([])
   const [logs, setLogs] = useState(initialLogs)
   const fileInputRef = useRef(null)
+  const ouDropdownRef = useRef(null)
+  const ouSearchInputRef = useRef(null)
+  const ouTree = useMemo(() => buildOuTree(ouOptions), [ouOptions])
+  const filteredOuTree = useMemo(() => filterOuTree(ouTree, ouSearch), [ouTree, ouSearch])
 
   function addLog(level, message) {
     const stamp = new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     setLogs((prev) => [...prev, { level, message, stamp }])
+  }
+
+  async function readApiResponse(response, operationName) {
+    const contentType = String(response.headers.get('content-type') || '').toLowerCase()
+    const rawBody = await response.text()
+
+    if (!contentType.includes('application/json')) {
+      const snippet = rawBody.replace(/\s+/g, ' ').trim().slice(0, 200)
+      throw new Error(`${operationName}: HTTP ${response.status}. ${snippet || 'Сервер повернув не-JSON відповідь.'}`)
+    }
+
+    let data
+    try {
+      data = rawBody ? JSON.parse(rawBody) : {}
+    } catch {
+      throw new Error(`${operationName}: HTTP ${response.status}. Некоректний JSON у відповіді.`)
+    }
+
+    if (!response.ok || data?.ok === false) {
+      throw new Error(data?.error || `${operationName}: HTTP ${response.status}`)
+    }
+
+    return data
   }
 
   useEffect(() => {
@@ -37,12 +67,11 @@ export default function App() {
 
     async function loadOptions() {
       try {
-        const health = await fetch(`${API_BASE}/health`)
-        if (!health.ok) throw new Error('health check failed')
+        const health = await fetch(`${API_BASE}/api/health`)
+        if (!health.ok) throw new Error(`health check failed (HTTP ${health.status})`)
 
-        const optionsRes = await fetch(`${API_BASE}/ad/options`)
-        if (!optionsRes.ok) throw new Error(`AD options HTTP ${optionsRes.status}`)
-        const options = await optionsRes.json()
+        const optionsRes = await fetch(`${API_BASE}/api/ad/options`)
+        const options = await readApiResponse(optionsRes, 'AD options')
 
         if (disposed) return
 
@@ -68,6 +97,39 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!ouTree.roots.length) return
+    setExpandedOuNodes((prev) => {
+      const next = new Set(prev)
+      for (const root of ouTree.roots) next.add(root.dn)
+
+      let cursor = selectedOu
+      while (cursor) {
+        const parent = ouTree.parentByDn.get(cursor)
+        if (!parent) break
+        next.add(parent)
+        cursor = parent
+      }
+      return next
+    })
+  }, [ouTree, selectedOu])
+
+  useEffect(() => {
+    if (!isOuDropdownOpen) return
+    function handleClickOutside(event) {
+      if (ouDropdownRef.current && !ouDropdownRef.current.contains(event.target)) {
+        setIsOuDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOuDropdownOpen])
+
+  useEffect(() => {
+    if (isOuDropdownOpen && ouSearchInputRef.current) {
+      ouSearchInputRef.current.focus()
+    }
+  }, [isOuDropdownOpen])
   async function handleFileSelected(event) {
     const file = event.target.files?.[0]
     if (!file) return
@@ -122,13 +184,12 @@ export default function App() {
 
     setIsPreviewLoading(true)
     try {
-      const response = await fetch(`${API_BASE}/users/preview`, {
+      const response = await fetch(`${API_BASE}/api/users/preview`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({ users, domainSuffix: domain, ou }),
       })
-      const data = await response.json()
-      if (!response.ok || !data.ok) throw new Error(data.error ?? `HTTP ${response.status}`)
+      const data = await readApiResponse(response, 'Preview')
 
       setPreviewRows(data.preview ?? [])
       setPreviewErrors(data.errors ?? [])
@@ -159,6 +220,14 @@ export default function App() {
     addLog('INFO', `Групу видалено: ${group}`)
   }
 
+  function toggleOuNode(dn) {
+    setExpandedOuNodes((prev) => {
+      const next = new Set(prev)
+      if (next.has(dn)) next.delete(dn)
+      else next.add(dn)
+      return next
+    })
+  }
   async function createUsers({ dryRun = false } = {}) {
     if (!sourceUsers.length) return addLog('ERROR', 'Спочатку виберіть Excel-файл')
     if (!selectedOu) return addLog('ERROR', 'Оберіть OU')
@@ -166,9 +235,9 @@ export default function App() {
 
     setIsCreating(true)
     try {
-      const response = await fetch(`${API_BASE}/users/create`, {
+      const response = await fetch(`${API_BASE}/api/users/create`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({
           users: sourceUsers,
           ou: selectedOu,
@@ -178,8 +247,7 @@ export default function App() {
           dryRun,
         }),
       })
-      const data = await response.json()
-      if (!response.ok || !data.ok) throw new Error(data.error ?? `HTTP ${response.status}`)
+      const data = await readApiResponse(response, 'Create')
 
       setCreateResults(data.created ?? [])
       setPreviewErrors(data.errors ?? [])
@@ -233,12 +301,43 @@ export default function App() {
                 <label className="label" htmlFor="domainSuffix">Домен для UPN / E-mail</label>
                 <input id="domainSuffix" className="text-input" value={domainSuffix} onChange={(e) => setDomainSuffix(e.target.value)} onBlur={() => requestPreview()} placeholder="donnu.edu.ua" />
               </div>
+
               <div className="field-block">
                 <label className="label" htmlFor="ouSelect">Виберіть OU</label>
-                <select id="ouSelect" className="input-select" value={selectedOu} onChange={(e) => { setSelectedOu(e.target.value); if (sourceUsers.length) requestPreview(sourceUsers, domainSuffix, e.target.value) }}>
-                  <option value="">Оберіть OU...</option>
-                  {ouOptions.map((ou) => <option key={ou.distinguishedName} value={ou.distinguishedName}>{ou.name} | {ou.distinguishedName}</option>)}
-                </select>
+                <div id="ouSelect" ref={ouDropdownRef} className="ou-tree-select" aria-label="Вибір OU деревом">
+                  <button type="button" className="ou-tree-trigger" onClick={() => setIsOuDropdownOpen((prev) => !prev)}>
+                    <span className="ou-tree-trigger-text" title={selectedOu || 'Оберіть OU...'}>{selectedOu || 'Оберіть OU...'}</span>
+                    <span className="ou-tree-caret">{isOuDropdownOpen ? '▴' : '▾'}</span>
+                  </button>
+                  <div className={`ou-tree-dropdown ${isOuDropdownOpen ? 'open' : ''}`}>
+                    <input
+                      ref={ouSearchInputRef}
+                      className="text-input ou-tree-search"
+                      value={ouSearch}
+                      onChange={(e) => setOuSearch(e.target.value)}
+                      placeholder="Пошук OU або DN..."
+                    />
+                    <div className="ou-tree-list" role="tree">
+                      {!filteredOuTree.roots.length && <div className="ou-tree-empty">{ouSearch.trim() ? 'Нічого не знайдено' : 'Список OU порожній'}</div>}
+                      {filteredOuTree.roots.map((node) => (
+                        <OuTreeNode
+                          key={node.dn}
+                          node={node}
+                          depth={0}
+                          expandedOuNodes={expandedOuNodes}
+                          selectedOu={selectedOu}
+                          isSearchMode={Boolean(ouSearch.trim())}
+                          onToggle={toggleOuNode}
+                          onSelect={(dn) => {
+                            setSelectedOu(dn)
+                            setIsOuDropdownOpen(false)
+                            if (sourceUsers.length) requestPreview(sourceUsers, domainSuffix, dn)
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -303,6 +402,188 @@ export default function App() {
   )
 }
 
+function OuTreeNode({ node, depth, expandedOuNodes, selectedOu, isSearchMode, onToggle, onSelect }) {
+  const hasChildren = node.children.length > 0
+  const isExpanded = expandedOuNodes.has(node.dn)
+  const isSelected = selectedOu === node.dn
+  const shouldShowChildren = hasChildren && (isSearchMode || isExpanded)
+
+  return (
+    <>
+      <div className={`ou-tree-node ${isSelected ? 'selected' : ''}`} style={{ paddingLeft: `${10 + depth * 16}px` }}>
+        <button
+          type="button"
+          className={`ou-tree-expander ${hasChildren ? '' : 'leaf'}`}
+          onClick={(event) => {
+            event.stopPropagation()
+            if (hasChildren) onToggle(node.dn)
+          }}
+          aria-label={hasChildren ? (isExpanded ? 'Згорнути' : 'Розгорнути') : 'Лист'}
+        >
+          {hasChildren ? (isSearchMode || isExpanded ? '▾' : '▸') : '•'}
+        </button>
+        <button type="button" className="ou-tree-pick" onClick={() => onSelect(node.dn)} title={node.dn}>
+          <span className="ou-tree-name">{node.label}</span>
+          <span className="ou-tree-dn">{node.dn}</span>
+        </button>
+      </div>
+      {shouldShowChildren && node.children.map((child) => (
+        <OuTreeNode
+          key={child.dn}
+          node={child}
+          depth={depth + 1}
+          expandedOuNodes={expandedOuNodes}
+          selectedOu={selectedOu}
+          isSearchMode={isSearchMode}
+          onToggle={onToggle}
+          onSelect={onSelect}
+        />
+      ))}
+    </>
+  )
+}
+
+function buildOuTree(ouOptions) {
+  const nodesByDn = new Map()
+  const parentByDn = new Map()
+  const dnSet = new Set()
+
+  for (const ou of ouOptions) {
+    const dn = String(ou?.distinguishedName || '').trim()
+    if (!dn || dnSet.has(dn)) continue
+    dnSet.add(dn)
+    nodesByDn.set(dn, {
+      dn,
+      label: String(ou?.name || '').trim() || getLabelFromDn(dn),
+      children: []
+    })
+  }
+
+  for (const dn of dnSet) {
+    const parentDn = findClosestExistingParentDn(dn, dnSet)
+    if (!parentDn) continue
+    parentByDn.set(dn, parentDn)
+    nodesByDn.get(parentDn).children.push(nodesByDn.get(dn))
+  }
+
+  const roots = []
+  for (const [dn, node] of nodesByDn.entries()) {
+    if (!parentByDn.has(dn)) roots.push(node)
+  }
+
+  sortTreeNodes(roots)
+  return { roots, parentByDn }
+}
+
+function splitDnParts(dn) {
+  const parts = []
+  let token = ''
+  let escaped = false
+
+  for (const ch of String(dn || '')) {
+    if (escaped) {
+      token += ch
+      escaped = false
+      continue
+    }
+    if (ch === '\\') {
+      token += ch
+      escaped = true
+      continue
+    }
+    if (ch === ',') {
+      if (token.trim()) parts.push(token.trim())
+      token = ''
+      continue
+    }
+    token += ch
+  }
+
+  if (token.trim()) parts.push(token.trim())
+  return parts
+}
+
+function removeFirstRdn(dn) {
+  const parts = splitDnParts(dn)
+  if (parts.length <= 1) return null
+  return parts.slice(1).join(',')
+}
+
+function findClosestExistingParentDn(dn, dnSet) {
+  let cursor = dn
+  while (true) {
+    const parent = removeFirstRdn(cursor)
+    if (!parent) return null
+    if (dnSet.has(parent)) return parent
+    cursor = parent
+  }
+}
+
+function getLabelFromDn(dn) {
+  const firstPart = splitDnParts(dn)[0] || ''
+  const eq = firstPart.indexOf('=')
+  if (eq === -1) return firstPart || dn
+
+  const type = firstPart.slice(0, eq).toUpperCase()
+  const value = firstPart.slice(eq + 1)
+  return `${value} (${type})`
+}
+
+function sortTreeNodes(nodes) {
+  nodes.sort((a, b) => a.label.localeCompare(b.label, 'uk-UA', { sensitivity: 'base' }))
+  for (const node of nodes) {
+    if (node.children.length > 0) sortTreeNodes(node.children)
+  }
+}
+
+function filterOuTree(tree, search) {
+  const query = normalizeSearchValue(search)
+  if (!query) return tree
+
+  const roots = tree.roots
+    .map((node) => filterOuNode(node, query))
+    .filter(Boolean)
+
+  return { roots, parentByDn: tree.parentByDn }
+}
+
+function filterOuNode(node, query) {
+  const matchSelf = matchesSearch(node.label, node.dn, query)
+  const matchedChildren = node.children
+    .map((child) => filterOuNode(child, query))
+    .filter(Boolean)
+
+  if (!matchSelf && matchedChildren.length === 0) return null
+  return { ...node, children: matchedChildren }
+}
+
+function matchesSearch(label, dn, query) {
+  const normalizedLabel = normalizeSearchValue(label)
+  const normalizedDn = normalizeSearchValue(dn)
+  const queryVariants = buildSearchVariants(query)
+  const haystack = [normalizedLabel, normalizedDn, translitUaToLat(normalizedLabel), translitUaToLat(normalizedDn), translitLatToUa(normalizedLabel), translitLatToUa(normalizedDn)].join(' ')
+  return queryVariants.some((variant) => variant && haystack.includes(variant))
+}
+
+function buildSearchVariants(query) {
+  const normalized = normalizeSearchValue(query)
+  return Array.from(new Set([
+    normalized,
+    translitUaToLat(normalized),
+    translitLatToUa(normalized)
+  ]))
+}
+
+function normalizeSearchValue(value) {
+  return String(value || '')
+    .toLocaleLowerCase('uk-UA')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’'`"]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function findSheetWithColumn(workbook, expectedHeader) {
   const target = normalizeHeader(expectedHeader)
   for (const sheetName of workbook.SheetNames) {
@@ -322,9 +603,134 @@ function normalizeHeader(value) {
 function normalizeExcelRows(rows) {
   return rows
     .map((row, index) => ({
-      fullName: String(row['Вступник'] || row['ПІБ'] || row['ПIБ'] || row['П.І.Б.'] || row['ПІП'] || '').trim(),
-      unit: String(row['Структурний підрозділ'] || row['OU'] || row['Підрозділ'] || '').trim(),
-      sourceRow: index + 2,
+      ...buildUserFromExcelRow(row),
+      sourceRow: index + 2
     }))
     .filter((row) => row.fullName)
 }
+
+function buildUserFromExcelRow(row) {
+  const fullName = String(row['Вступник'] || row['ПІБ'] || row['ПIБ'] || row['П.І.Б.'] || row['ПІП'] || '').trim()
+  const unit = String(row['Структурний підрозділ'] || row['OU'] || row['Підрозділ'] || '').trim()
+  const position = String(row['Должность'] || row['Посада'] || '').trim()
+  const organization = String(row['Организация'] || row['Організація'] || '').trim()
+  const name = splitUkrainianFullName(fullName)
+  const samAccountName = generateSamAccountName(name.firstName, name.lastName)
+  const password = generateTempPassword()
+
+  return {
+    fullName,
+    unit,
+    position,
+    organization,
+    firstName: name.firstName,
+    lastName: name.lastName,
+    middleName: name.middleName,
+    samAccountName,
+    password
+  }
+}
+
+function splitUkrainianFullName(fullName) {
+  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) {
+    return { firstName: '', lastName: '', middleName: '' }
+  }
+
+  const lastName = parts[0] || ''
+  const firstName = parts[1] || ''
+  const middleName = parts.slice(2).join(' ')
+  return { firstName, lastName, middleName }
+}
+
+function generateSamAccountName(firstName, lastName) {
+  const first = translitUaToLat(firstName || '')
+  const last = translitUaToLat(lastName || '')
+  const base = `${first ? first[0] : ''}.${last}`.toLowerCase().replace(/[^a-z0-9._-]/g, '')
+  const cleaned = base.replace(/^[._-]+|[._-]+$/g, '')
+  if (cleaned) return cleaned.slice(0, 20)
+
+  const fallback = `user${Math.floor(1000 + Math.random() * 9000)}`
+  return fallback.slice(0, 20)
+}
+
+function generateTempPassword(length = 12) {
+  const lower = 'abcdefghijkmnpqrstuvwxyz'
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+  const digits = '23456789'
+  const symbols = '!@#$%*?'
+  const all = `${lower}${upper}${digits}${symbols}`
+
+  const required = [
+    lower[Math.floor(Math.random() * lower.length)],
+    upper[Math.floor(Math.random() * upper.length)],
+    digits[Math.floor(Math.random() * digits.length)],
+    symbols[Math.floor(Math.random() * symbols.length)]
+  ]
+
+  while (required.length < length) {
+    required.push(all[Math.floor(Math.random() * all.length)])
+  }
+
+  for (let i = required.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = required[i]
+    required[i] = required[j]
+    required[j] = tmp
+  }
+
+  return required.join('')
+}
+
+function translitUaToLat(input) {
+  const map = {
+    а: 'a', б: 'b', в: 'v', г: 'h', ґ: 'g', д: 'd', е: 'e', є: 'ie', ж: 'zh', з: 'z',
+    и: 'y', і: 'i', ї: 'i', й: 'i', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p',
+    р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'shch',
+    ь: '', ю: 'iu', я: 'ia', "'": '', '’': '', '-': '-', ' ': ''
+  }
+
+  return String(input || '')
+    .toLowerCase()
+    .split('')
+    .map((ch) => map[ch] ?? ch)
+    .join('')
+}
+
+function translitLatToUa(input) {
+  let value = String(input || '').toLowerCase()
+  const digraphs = [
+    ['shch', 'щ'],
+    ['zh', 'ж'],
+    ['kh', 'х'],
+    ['ts', 'ц'],
+    ['ch', 'ч'],
+    ['sh', 'ш'],
+    ['yu', 'ю'],
+    ['iu', 'ю'],
+    ['ya', 'я'],
+    ['ia', 'я'],
+    ['ye', 'є'],
+    ['ie', 'є'],
+    ['yi', 'ї'],
+    ['yo', 'йо']
+  ]
+
+  for (const [from, to] of digraphs) {
+    value = value.split(from).join(to)
+  }
+
+  const chars = {
+    a: 'а', b: 'б', c: 'к', d: 'д', e: 'е', f: 'ф', g: 'г', h: 'х', i: 'і', j: 'й',
+    k: 'к', l: 'л', m: 'м', n: 'н', o: 'о', p: 'п', q: 'к', r: 'р', s: 'с', t: 'т',
+    u: 'у', v: 'в', w: 'в', x: 'кс', y: 'и', z: 'з'
+  }
+
+  return value
+    .split('')
+    .map((ch) => chars[ch] ?? ch)
+    .join('')
+}
+
+
+

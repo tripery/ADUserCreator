@@ -2,6 +2,7 @@
 import * as XLSX from 'xlsx'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+const THEME_STORAGE_KEY = 'adusercreator-theme'
 
 const initialLogs = [
   { level: 'OK', message: 'React/Vite UI ініціалізовано' },
@@ -9,6 +10,7 @@ const initialLogs = [
 ]
 
 export default function App() {
+  const [theme, setTheme] = useState(() => getInitialTheme())
   const [apiStatus, setApiStatus] = useState('checking')
   const [domainSuffix, setDomainSuffix] = useState('')
   const [ouOptions, setOuOptions] = useState([])
@@ -33,10 +35,30 @@ export default function App() {
   const ouSearchInputRef = useRef(null)
   const ouTree = useMemo(() => buildOuTree(ouOptions), [ouOptions])
   const filteredOuTree = useMemo(() => filterOuTree(ouTree, ouSearch), [ouTree, ouSearch])
+  const selectedOuName = useMemo(() => {
+    const match = ouOptions.find((item) => item.distinguishedName === selectedOu)
+    return match?.name || getLabelFromDn(selectedOu || '')
+  }, [ouOptions, selectedOu])
+  const latestLog = logs.length ? logs[logs.length - 1] : null
+  const summaryCards = useMemo(() => ([
+    { label: 'Записів з Excel', value: sourceUsers.length, tone: 'blue' },
+    { label: 'Груп обрано', value: selectedGroups.length, tone: 'amber' },
+    { label: 'Помилок перевірки', value: previewErrors.length, tone: previewErrors.length ? 'red' : 'green' },
+    { label: 'Створено', value: createResults.length, tone: 'green' },
+  ]), [sourceUsers.length, selectedGroups.length, previewErrors.length, createResults.length])
+  const workflowSteps = [
+    { title: '1. Імпорт Excel', description: 'Завантажте файл зі списком співробітників або студентів.' },
+    { title: '2. Налаштування AD', description: 'Оберіть OU, домен і додаткові групи без переходів по інших вікнах.' },
+    { title: '3. Контроль результату', description: 'Перевірте preview, dry-run і фінальне створення користувачів.' },
+  ]
 
   function addLog(level, message) {
     const stamp = new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     setLogs((prev) => [...prev, { level, message, stamp }])
+  }
+
+  function handlePlaceholderAction(label) {
+    addLog('INFO', `Кнопка "${label}" поки що не має окремої сторінки або дії`)
   }
 
   async function readApiResponse(response, operationName) {
@@ -61,6 +83,15 @@ export default function App() {
 
     return data
   }
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+    } catch {
+      // Ignore storage failures and keep the theme in memory only.
+    }
+  }, [theme])
 
   useEffect(() => {
     let disposed = false
@@ -262,140 +293,256 @@ export default function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand"><div className="brand-icon">👥</div><div className="brand-text">Створення користувачів AD</div></div>
+        <div className="brand">
+          <div className="brand-icon">👥</div>
+          <div>
+            <div className="brand-kicker">ADUSERCREATOR</div>
+            <div className="brand-text">Створення користувачів AD</div>
+          </div>
+        </div>
         <nav className="menu">
-          <button className="menu-item active" type="button"><span className="menu-icon">⌂</span><span>Головна</span></button>
-          <button className="menu-item" type="button"><span className="menu-icon">👤</span><span>Користувачі</span></button>
-          <button className="menu-item" type="button"><span className="menu-icon">👥</span><span>Групи</span></button>
+          <button className="menu-item active" type="button" onClick={() => handlePlaceholderAction('Головна')}><span className="menu-icon">⌂</span><span>Головна</span></button>
+          <button className="menu-item" type="button" onClick={() => handlePlaceholderAction('Користувачі')}><span className="menu-icon">👤</span><span>Користувачі</span></button>
+          <button className="menu-item" type="button" onClick={() => handlePlaceholderAction('Групи')}><span className="menu-icon">👥</span><span>Групи</span></button>
         </nav>
-        <div className="menu-footer"><button className="menu-item" type="button"><span className="menu-icon">⚙</span><span>Налаштування</span></button></div>
+        <div className="sidebar-note">
+          <div className="sidebar-note-label">Активний контур</div>
+          <div className="sidebar-note-value">{selectedOuName || 'OU не обрано'}</div>
+          <div className="sidebar-note-muted">{domainSuffix || 'Домен не вказано'}</div>
+        </div>
+        <div className="menu-footer"><button className="menu-item" type="button" onClick={() => handlePlaceholderAction('Налаштування')}><span className="menu-icon">⚙</span><span>Налаштування</span></button></div>
       </aside>
 
       <main className="main-area">
         <header className="topbar">
           <div className="topbar-left">
             <h1>Створення користувачів AD</h1>
-            <p>React + Vite + SheetJS + PowerShell HTTP API</p>
+            <p>Один робочий простір для імпорту Excel, перевірки preview та створення облікових записів.</p>
           </div>
           <div className="topbar-right">
             <div className={`status-badge ${apiStatus}`}>{apiStatus === 'online' ? 'API online' : apiStatus === 'offline' ? 'API offline' : 'API...'}</div>
-            <button className="profile" type="button"><span className="avatar">A</span><span className="profile-name">admin</span><span className="caret">⌄</span></button>
+            <button
+              className="theme-toggle"
+              type="button"
+              onClick={() => setTheme((prev) => prev === 'dark' ? 'light' : 'dark')}
+              aria-label={theme === 'dark' ? 'Увімкнути світлу тему' : 'Увімкнути темну тему'}
+              title={theme === 'dark' ? 'Світла тема' : 'Темна тема'}
+            >
+              <span className="theme-toggle-icon">{theme === 'dark' ? '☀' : '☾'}</span>
+              <span>{theme === 'dark' ? 'Світла тема' : 'Темна тема'}</span>
+            </button>
+            <button className="profile" type="button" onClick={() => handlePlaceholderAction('Профіль admin')}><span className="avatar">A</span><span className="profile-name">admin</span><span className="caret">⌄</span></button>
           </div>
         </header>
 
         <section className="content">
-          <div className="card">
-            <h2>Завантажте Excel-файл зі списком користувачів</h2>
-            <div className="field-block">
-              <label className="label">Excel файл (*.xlsx)</label>
-              <div className="file-row">
-                <label className="btn btn-primary file-pick" htmlFor="excelFile">📄 Вибрати файл</label>
-                <input id="excelFile" ref={fileInputRef} type="file" accept=".xlsx" hidden onChange={handleFileSelected} />
-                <div className="file-pill">{fileName}</div>
-                <button className="btn btn-danger" type="button" onClick={clearFile}>Видалити</button>
+          <section className="hero-panel">
+            <div className="hero-copy">
+              <div className="eyebrow">Панель керування Active Directory</div>
+              <h2>Акуратний фронтенд для масового створення користувачів без ручної рутини.</h2>
+              <p>
+                Завантажуйте Excel, одразу бачте готові логіни та пошту, запускайте dry-run і лише потім
+                створюйте облікові записи в AD.
+              </p>
+              <div className="hero-actions">
+                <button className="btn btn-success" type="button" disabled={isCreating} onClick={() => createUsers()}>
+                  {isCreating ? 'Створення...' : 'Створити користувачів'}
+                </button>
+                <button className="btn btn-ghost strong" type="button" onClick={() => createUsers({ dryRun: true })} disabled={isCreating || !sourceUsers.length}>
+                  Dry-run create
+                </button>
               </div>
             </div>
+            <div className="hero-stats">
+              {summaryCards.map((card) => (
+                <div key={card.label} className={`hero-stat ${card.tone}`}>
+                  <div className="hero-stat-value">{card.value}</div>
+                  <div className="hero-stat-label">{card.label}</div>
+                </div>
+              ))}
+            </div>
+          </section>
 
-            <div className="grid-2">
-              <div className="field-block">
-                <label className="label" htmlFor="domainSuffix">Домен для UPN / E-mail</label>
-                <input id="domainSuffix" className="text-input" value={domainSuffix} onChange={(e) => setDomainSuffix(e.target.value)} onBlur={() => requestPreview()} placeholder="donnu.edu.ua" />
-              </div>
+          <section className="workspace-grid">
+            <div className="workspace-main">
+              <div className="card card-elevated">
+                <div className="card-lead">
+                  <div>
+                    <div className="section-kicker">Налаштування пакета</div>
+                    <h2>Завантажте Excel і налаштуйте контекст створення</h2>
+                  </div>
+                  <div className="pill-info">{fileName}</div>
+                </div>
+                <div className="field-block">
+                  <label className="label">Excel файл (*.xlsx)</label>
+                  <div className="file-row">
+                    <label className="btn btn-primary file-pick" htmlFor="excelFile">📄 Вибрати файл</label>
+                    <input id="excelFile" ref={fileInputRef} type="file" accept=".xlsx" hidden onChange={handleFileSelected} />
+                    <div className="file-pill">{fileName}</div>
+                    <button className="btn btn-danger" type="button" onClick={clearFile}>Видалити</button>
+                  </div>
+                </div>
 
-              <div className="field-block">
-                <label className="label" htmlFor="ouSelect">Виберіть OU</label>
-                <div id="ouSelect" ref={ouDropdownRef} className="ou-tree-select" aria-label="Вибір OU деревом">
-                  <button type="button" className="ou-tree-trigger" onClick={() => setIsOuDropdownOpen((prev) => !prev)}>
-                    <span className="ou-tree-trigger-text" title={selectedOu || 'Оберіть OU...'}>{selectedOu || 'Оберіть OU...'}</span>
-                    <span className="ou-tree-caret">{isOuDropdownOpen ? '▴' : '▾'}</span>
-                  </button>
-                  <div className={`ou-tree-dropdown ${isOuDropdownOpen ? 'open' : ''}`}>
-                    <input
-                      ref={ouSearchInputRef}
-                      className="text-input ou-tree-search"
-                      value={ouSearch}
-                      onChange={(e) => setOuSearch(e.target.value)}
-                      placeholder="Пошук OU або DN..."
-                    />
-                    <div className="ou-tree-list" role="tree">
-                      {!filteredOuTree.roots.length && <div className="ou-tree-empty">{ouSearch.trim() ? 'Нічого не знайдено' : 'Список OU порожній'}</div>}
-                      {filteredOuTree.roots.map((node) => (
-                        <OuTreeNode
-                          key={node.dn}
-                          node={node}
-                          depth={0}
-                          expandedOuNodes={expandedOuNodes}
-                          selectedOu={selectedOu}
-                          isSearchMode={Boolean(ouSearch.trim())}
-                          onToggle={toggleOuNode}
-                          onSelect={(dn) => {
-                            setSelectedOu(dn)
-                            setIsOuDropdownOpen(false)
-                            if (sourceUsers.length) requestPreview(sourceUsers, domainSuffix, dn)
-                          }}
+                <div className="grid-2">
+                  <div className="field-block">
+                    <label className="label" htmlFor="domainSuffix">Домен для UPN / E-mail</label>
+                    <input id="domainSuffix" className="text-input" value={domainSuffix} onChange={(e) => setDomainSuffix(e.target.value)} onBlur={() => requestPreview()} placeholder="donnu.edu.ua" />
+                  </div>
+
+                  <div className="field-block">
+                    <label className="label" htmlFor="ouSelect">Виберіть OU</label>
+                    <div id="ouSelect" ref={ouDropdownRef} className="ou-tree-select" aria-label="Вибір OU деревом">
+                      <button type="button" className="ou-tree-trigger" onClick={() => setIsOuDropdownOpen((prev) => !prev)}>
+                        <span className="ou-tree-trigger-text" title={selectedOu || 'Оберіть OU...'}>{selectedOu || 'Оберіть OU...'}</span>
+                        <span className="ou-tree-caret">{isOuDropdownOpen ? '▴' : '▾'}</span>
+                      </button>
+                      <div className={`ou-tree-dropdown ${isOuDropdownOpen ? 'open' : ''}`}>
+                        <input
+                          ref={ouSearchInputRef}
+                          className="text-input ou-tree-search"
+                          value={ouSearch}
+                          onChange={(e) => setOuSearch(e.target.value)}
+                          placeholder="Пошук OU або DN..."
                         />
-                      ))}
+                        <div className="ou-tree-list" role="tree">
+                          {!filteredOuTree.roots.length && <div className="ou-tree-empty">{ouSearch.trim() ? 'Нічого не знайдено' : 'Список OU порожній'}</div>}
+                          {filteredOuTree.roots.map((node) => (
+                            <OuTreeNode
+                              key={node.dn}
+                              node={node}
+                              depth={0}
+                              expandedOuNodes={expandedOuNodes}
+                              selectedOu={selectedOu}
+                              isSearchMode={Boolean(ouSearch.trim())}
+                              onToggle={toggleOuNode}
+                              onSelect={(dn) => {
+                                setSelectedOu(dn)
+                                setIsOuDropdownOpen(false)
+                                if (sourceUsers.length) requestPreview(sourceUsers, domainSuffix, dn)
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="field-block">
-              <label className="label">Додати користувачів до груп (опціонально)</label>
-              <div className="chips-input">
-                <div className="chips-left">
-                  <select className="chip-select" defaultValue="" onChange={(e) => { if (e.target.value) addGroup(e.target.value); e.target.value = '' }}>
-                    <option value="">Вибрати групу з AD</option>
-                    {groupOptions.slice(0, 400).map((g) => <option key={g.samAccountName} value={g.samAccountName}>{g.name} ({g.samAccountName})</option>)}
-                  </select>
-                  <input className="chip-text" value={groupInput} onChange={(e) => setGroupInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addGroup(groupInput); setGroupInput('') } }} placeholder="Введіть SamAccountName групи" />
+                <div className="field-block">
+                  <label className="label">Додати користувачів до груп (опціонально)</label>
+                  <div className="chips-input">
+                    <div className="chips-left">
+                      <select className="chip-select" defaultValue="" onChange={(e) => { if (e.target.value) addGroup(e.target.value); e.target.value = '' }}>
+                        <option value="">Вибрати групу з AD</option>
+                        {groupOptions.slice(0, 400).map((g) => <option key={g.samAccountName} value={g.samAccountName}>{g.name} ({g.samAccountName})</option>)}
+                      </select>
+                      <input className="chip-text" value={groupInput} onChange={(e) => setGroupInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addGroup(groupInput); setGroupInput('') } }} placeholder="Введіть SamAccountName групи" />
+                    </div>
+                    <button className="add-chip" type="button" onClick={() => { addGroup(groupInput); setGroupInput('') }}>❯</button>
+                  </div>
+                  <div className="chip-list">{selectedGroups.map((group) => <div className="chip" key={group}><span>{group}</span><button type="button" onClick={() => removeGroup(group)}>×</button></div>)}</div>
                 </div>
-                <button className="add-chip" type="button" onClick={() => { addGroup(groupInput); setGroupInput('') }}>❯</button>
+
+                <div className="field-block inline-actions">
+                  <label className="checkbox-row"><input type="checkbox" checked={passwordNeverExpires} onChange={(e) => setPasswordNeverExpires(e.target.checked)} /><span>Пароль не має терміну дії</span></label>
+                  <button className="btn btn-ghost strong" type="button" onClick={() => requestPreview()} disabled={isPreviewLoading || !sourceUsers.length}>{isPreviewLoading ? 'Оновлення preview...' : 'Оновити preview'}</button>
+                  <button className="btn btn-ghost" type="button" onClick={() => createUsers({ dryRun: true })} disabled={isCreating || !sourceUsers.length}>Dry-run create</button>
+                </div>
               </div>
-              <div className="chip-list">{selectedGroups.map((group) => <div className="chip" key={group}><span>{group}</span><button type="button" onClick={() => removeGroup(group)}>×</button></div>)}</div>
+
+              <div className="card">
+                <div className="card-header-row">
+                  <div>
+                    <div className="section-kicker">Попередній перегляд</div>
+                    <h2>Користувачі перед створенням</h2>
+                  </div>
+                  <div className="muted">Показано 1-{previewRows.length} з {previewRows.length} користувачів</div>
+                </div>
+                <div className="table-wrap">
+                  <table>
+                    <thead><tr><th>ПІБ</th><th>Логін</th><th>E-mail</th><th>Підрозділ</th></tr></thead>
+                    <tbody>
+                      {previewRows.map((row, index) => <tr key={`${row.login}-${index}`}><td>{row.fullName}</td><td>{row.login}</td><td>{row.email}</td><td>{row.unit || '—'}</td></tr>)}
+                      {!previewRows.length && <tr><td colSpan={4} className="empty-cell">Немає даних для preview</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+                {previewErrors.length > 0 && <div className="error-list">{previewErrors.map((err, idx) => <div className="error-item" key={`${err.fullName ?? 'row'}-${idx}`}>{err.fullName || `Рядок ${err.sourceRow ?? '?'}`}: {err.error}</div>)}</div>}
+              </div>
+
+              <div className="card action-bar">
+                <div>
+                  <div className="section-kicker">Фінальна дія</div>
+                  <h2 className="action-title">Після dry-run можна запускати створення в AD</h2>
+                </div>
+                <button className="btn btn-success btn-lg" type="button" disabled={isCreating} onClick={() => createUsers()}>{isCreating ? 'Створення...' : '👤＋ Створити користувачів'}</button>
+              </div>
+
+              <div className="card">
+                <div className="card-header-row"><div><div className="section-kicker">Результати</div><h2>Створені облікові записи</h2></div><div className="muted">Локально, не передавайте назовні</div></div>
+                <div className="table-wrap">
+                  <table>
+                    <thead><tr><th>ПІБ</th><th>Логін</th><th>E-mail</th><th>Пароль</th><th>Статус</th></tr></thead>
+                    <tbody>
+                      {createResults.map((row, index) => <tr key={`${row.login}-${index}`}><td>{row.fullName}</td><td>{row.login}</td><td>{row.email}</td><td>{row.password || '—'}</td><td>{row.status}</td></tr>)}
+                      {!createResults.length && <tr><td colSpan={5} className="empty-cell">Результатів ще немає</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
 
-            <div className="field-block inline-actions">
-              <label className="checkbox-row"><input type="checkbox" checked={passwordNeverExpires} onChange={(e) => setPasswordNeverExpires(e.target.checked)} /><span>Пароль не має терміну дії</span></label>
-              <button className="btn btn-ghost" type="button" onClick={() => requestPreview()} disabled={isPreviewLoading || !sourceUsers.length}>{isPreviewLoading ? 'Оновлення preview...' : 'Оновити preview'}</button>
-              <button className="btn btn-ghost" type="button" onClick={() => createUsers({ dryRun: true })} disabled={isCreating || !sourceUsers.length}>Dry-run create</button>
-            </div>
-          </div>
+            <aside className="workspace-side">
+              <div className="card side-card accent-card">
+                <div className="section-kicker">Поточний стан</div>
+                <h2>Сесія запуску</h2>
+                <div className="status-stack">
+                  <div className="status-row">
+                    <span>API</span>
+                    <strong className={`status-inline ${apiStatus}`}>{apiStatus === 'online' ? 'Доступний' : apiStatus === 'offline' ? 'Недоступний' : 'Перевірка'}</strong>
+                  </div>
+                  <div className="status-row">
+                    <span>OU</span>
+                    <strong>{selectedOuName || 'Не обрано'}</strong>
+                  </div>
+                  <div className="status-row">
+                    <span>Домен</span>
+                    <strong>{domainSuffix || 'Не вказано'}</strong>
+                  </div>
+                  <div className="status-row">
+                    <span>Останній лог</span>
+                    <strong>{latestLog?.level || '—'}</strong>
+                  </div>
+                </div>
+                <div className="context-box">
+                  <div className="context-box-label">Остання подія</div>
+                  <div className="context-box-text">{latestLog?.message || 'Журнал ще порожній.'}</div>
+                </div>
+              </div>
 
-          <div className="card">
-            <div className="card-header-row"><h2>Попередній перегляд користувачів</h2><div className="muted">Показано 1-{previewRows.length} з {previewRows.length} користувачів</div></div>
-            <div className="table-wrap">
-              <table>
-                <thead><tr><th>ПІБ</th><th>Логін</th><th>E-mail</th><th>Підрозділ</th></tr></thead>
-                <tbody>
-                  {previewRows.map((row, index) => <tr key={`${row.login}-${index}`}><td>{row.fullName}</td><td>{row.login}</td><td>{row.email}</td><td>{row.unit || '—'}</td></tr>)}
-                  {!previewRows.length && <tr><td colSpan={4} className="empty-cell">Немає даних для preview</td></tr>}
-                </tbody>
-              </table>
-            </div>
-            {previewErrors.length > 0 && <div className="error-list">{previewErrors.map((err, idx) => <div className="error-item" key={`${err.fullName ?? 'row'}-${idx}`}>{err.fullName || `Рядок ${err.sourceRow ?? '?'}`}: {err.error}</div>)}</div>}
-          </div>
+              <div className="card side-card">
+                <div className="section-kicker">Робочий сценарій</div>
+                <h2>Що робити далі</h2>
+                <div className="checklist">
+                  {workflowSteps.map((step) => (
+                    <div key={step.title} className="checklist-item">
+                      <div className="checklist-title">{step.title}</div>
+                      <div className="checklist-text">{step.description}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-          <div className="card action-bar"><div className="action-bar-spacer" /><button className="btn btn-success btn-lg" type="button" disabled={isCreating} onClick={() => createUsers()}>{isCreating ? 'Створення...' : '👤＋ Створити користувачів'}</button></div>
-
-          <div className="card">
-            <div className="card-header-row"><h2>Результати створення (включно з паролями)</h2><div className="muted">Локально, не передавайте назовні</div></div>
-            <div className="table-wrap">
-              <table>
-                <thead><tr><th>ПІБ</th><th>Логін</th><th>E-mail</th><th>Пароль</th><th>Статус</th></tr></thead>
-                <tbody>
-                  {createResults.map((row, index) => <tr key={`${row.login}-${index}`}><td>{row.fullName}</td><td>{row.login}</td><td>{row.email}</td><td>{row.password || '—'}</td><td>{row.status}</td></tr>)}
-                  {!createResults.length && <tr><td colSpan={5} className="empty-cell">Результатів ще немає</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header-row"><h2>Журнал виконання</h2><button className="btn btn-ghost" type="button" onClick={() => setLogs([])}>Очистити</button></div>
-            <pre className="log-box">{logs.map((l) => `[${l.stamp ?? '--:--:--'}] [${l.level}] ${l.message}`).join('\n')}</pre>
-          </div>
+              <div className="card side-card">
+                <div className="section-kicker">Журнал виконання</div>
+                <div className="card-header-row">
+                  <h2>Події сесії</h2>
+                  <button className="btn btn-ghost" type="button" onClick={() => setLogs([])}>Очистити</button>
+                </div>
+                <pre className="log-box">{logs.map((l) => `[${l.stamp ?? '--:--:--'}] [${l.level}] ${l.message}`).join('\n')}</pre>
+              </div>
+            </aside>
+          </section>
         </section>
       </main>
     </div>
@@ -441,6 +588,19 @@ function OuTreeNode({ node, depth, expandedOuNodes, selectedOu, isSearchMode, on
       ))}
     </>
   )
+}
+
+function getInitialTheme() {
+  if (typeof window === 'undefined') return 'light'
+
+  try {
+    const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
+    if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme
+  } catch {
+    // Ignore storage read errors and fall back to media query/default.
+  }
+
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
 function buildOuTree(ouOptions) {

@@ -1,1 +1,23 @@
-ADUserCreator_portable.zip
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# PowerShell / logs
+*.log
+
+# Build artifacts
+dist/
+release/
+ADUserCreator/
+*.zip
+
+# Frontend artifacts
+webui-react/node_modules/
+webui-react/dist/
+webui-react/.vite/
+
+# Optional local environment files
+.env
+.env.local
+.env.*
+!.env.example

@@ -1,13 +1,24 @@
-version: "3.9"
-
 services:
   webui:
+    container_name: adusercreator-webui
     build:
       context: ./webui-react
       dockerfile: Dockerfile
+
+    working_dir: /app
+
     ports:
       - "5173:5173"
+
+    volumes:
+      - ./webui-react:/app
+      - /app/node_modules
+
     environment:
-      - API_PROXY_TARGET=http://host.docker.internal:8787
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+    command: npm run dev -- --host 0.0.0.0

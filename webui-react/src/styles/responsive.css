@@ -1,0 +1,163 @@
+@media (max-width: 1250px) {
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workspace-side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .workspace-side .card:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1100px) {
+  .app-shell {
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
+
+  .brand-kicker,
+  .brand-text,
+  .menu-item span:not(.menu-icon),
+  .sidebar-note {
+    display: none;
+  }
+
+  .brand {
+    justify-content: center;
+    padding: 18px 8px;
+  }
+
+  .brand-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .menu-item {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 980px) {
+  .hero-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-showcase-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 800px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .topbar {
+    padding: 22px 18px 8px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .topbar-right {
+    justify-content: space-between;
+  }
+
+  .content {
+    padding: 8px 18px 22px;
+  }
+
+  .hero-panel,
+  .card,
+  .settings-showcase {
+    padding: 20px;
+  }
+
+  .workspace-side {
+    grid-template-columns: 1fr;
+  }
+
+  .chips-input,
+  .file-row {
+    grid-template-columns: 1fr;
+  }
+
+  .add-chip {
+    width: 100%;
+    min-height: 46px;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .file-pick {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .theme-toggle,
+  .profile,
+  .btn-lg {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .hero-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .theme-choice-grid,
+  .sidebar-mode-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar-left h1 {
+    font-size: 26px;
+  }
+
+  .hero-copy h2 {
+    font-size: 30px;
+  }
+
+  .card-header-row,
+  .card-lead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

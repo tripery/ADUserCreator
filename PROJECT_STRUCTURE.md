@@ -3,18 +3,22 @@
 ## Main source folders
 
 - `src/`
-  PowerShell desktop application source code.
-- `src/ad/`
-  Active Directory logic, naming, transliteration, provisioning helpers.
-- `src/common/`
-  Shared helpers such as logging and password generation.
-- `src/excel/`
-  Excel import and parsing logic.
+  Desktop application entrypoint and app-local folders.
+- `src/main.ps1`
+  Desktop entrypoint.
 - `src/ui/`
   WinForms / desktop UI scripts.
+- `src/core/`
+  Shared business logic used by both desktop and web backends.
+- `src/core/ad/`
+  Active Directory logic, naming, transliteration, preview/create helpers.
+- `src/core/common/`
+  Shared helpers such as logging and password generation.
+- `src/core/excel/`
+  Excel import and parsing logic for desktop workflows.
 
 - `webapi/`
-  Local PowerShell HTTP API used by the React frontend.
+  PowerShell HTTP API used by the React frontend.
 
 - `webui-react/`
   Main web frontend built with React + Vite.
@@ -60,7 +64,9 @@ These should not be treated as source folders:
 
 If you are changing application logic, work mainly in:
 
-- `src/`
+- `src/core/`
+- `src/ui/`
+- `src/main.ps1`
 - `webapi/`
 - `webui-react/src/`
 - `build/`

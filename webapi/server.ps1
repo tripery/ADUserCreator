@@ -12,135 +12,30 @@ function Resolve-ProjectRoot {
 }
 
 $script:ProjectRoot = Resolve-ProjectRoot
+$script:PasswordLogsRoot = Join-Path $script:ProjectRoot 'data\password-logs'
+
+function Ensure-PasswordLogsRoot {
+    if (-not (Test-Path -LiteralPath $script:PasswordLogsRoot)) {
+        New-Item -ItemType Directory -Path $script:PasswordLogsRoot -Force | Out-Null
+    }
+}
 
 function Initialize-AppDependencies {
     Import-Module ActiveDirectory -ErrorAction Stop
 }
 
-. (Join-Path $script:ProjectRoot 'src\ad\Transliteration.ps1')
-. (Join-Path $script:ProjectRoot 'src\ad\Naming.ps1')
-. (Join-Path $script:ProjectRoot 'src\common\Password.ps1')
-
-function Add-CorsHeaders {
-    param([Parameter(Mandatory)]$Response)
-    $Response.Headers['Access-Control-Allow-Origin'] = $AllowOrigin
-    $Response.Headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
-    $Response.Headers['Access-Control-Allow-Headers'] = 'Content-Type'
-}
-
-function Write-JsonResponse {
-    param([Parameter(Mandatory)]$Context,[Parameter(Mandatory)]$Data,[int]$StatusCode = 200)
-    $json = $Data | ConvertTo-Json -Depth 12
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
-    $res = $Context.Response
-    $res.StatusCode = $StatusCode
-    $res.ContentType = 'application/json; charset=utf-8'
-    Add-CorsHeaders -Response $res
-    $res.ContentEncoding = [System.Text.Encoding]::UTF8
-    $res.OutputStream.Write($bytes, 0, $bytes.Length)
-    $res.OutputStream.Close()
-}
-
-function Write-TextResponse {
-    param([Parameter(Mandatory)]$Context,[Parameter(Mandatory)][string]$Text,[int]$StatusCode = 200,[string]$ContentType = 'text/plain; charset=utf-8')
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Text)
-    $res = $Context.Response
-    $res.StatusCode = $StatusCode
-    $res.ContentType = $ContentType
-    Add-CorsHeaders -Response $res
-    $res.ContentEncoding = [System.Text.Encoding]::UTF8
-    $res.OutputStream.Write($bytes, 0, $bytes.Length)
-    $res.OutputStream.Close()
-}
-
-function Read-JsonBody {
-    param([Parameter(Mandatory)]$Request)
-    # Browser JSON payload is UTF-8; HttpListener ContentEncoding may be incorrect when charset is omitted.
-    $reader = New-Object System.IO.StreamReader($Request.InputStream, [System.Text.Encoding]::UTF8)
-    try { $body = $reader.ReadToEnd() } finally { $reader.Dispose() }
-    if ([string]::IsNullOrWhiteSpace($body)) { return @{} }
-    return ($body | ConvertFrom-Json)
-}
+. (Join-Path $script:ProjectRoot 'src\core\ad\Transliteration.ps1')
+. (Join-Path $script:ProjectRoot 'src\core\ad\Naming.ps1')
+. (Join-Path $script:ProjectRoot 'src\core\ad\UserPreview.ps1')
+. (Join-Path $script:ProjectRoot 'src\core\ad\UserCreate.ps1')
+. (Join-Path $script:ProjectRoot 'src\core\common\Password.ps1')
+. (Join-Path $script:ProjectRoot 'src\web\Http.ps1')
+. (Join-Path $script:ProjectRoot 'src\logs\PasswordLogs.ps1')
 
 function Normalize-Text {
     param([string]$Value)
     if ($null -eq $Value) { return '' }
     return ([string]$Value).Trim()
-}
-
-function Split-FullName {
-    param([Parameter(Mandatory)][string]$FullName)
-    $parts = (Normalize-Text $FullName) -split '\s+' | Where-Object { $_ }
-    if ($parts.Count -lt 2) { throw "Неможливо розібрати ПІБ '$FullName'. Очікується щонайменше 'Прізвище Ім''я'." }
-    [pscustomobject]@{
-        Surname    = $parts[0]
-        GivenName  = $parts[1]
-        MiddleName = if ($parts.Count -ge 3) { ($parts[2..($parts.Count - 1)] -join ' ') } else { '' }
-    }
-}
-
-function Build-BaseIdentifiers {
-    param([Parameter(Mandatory)]$NameParts)
-    $surnameLat = Convert-UA2Latin $NameParts.Surname
-    $givenLat = Convert-UA2Latin $NameParts.GivenName
-    $middleLat = if ($NameParts.MiddleName) { Convert-UA2Latin $NameParts.MiddleName } else { '' }
-    if ([string]::IsNullOrWhiteSpace($surnameLat) -or [string]::IsNullOrWhiteSpace($givenLat)) { throw 'Не вдалося транслітерувати ПІБ у латиницю.' }
-    $samBase = ('{0}.{1}' -f $givenLat.Substring(0,1), $surnameLat).ToLower()
-    [pscustomobject]@{ SurnameLatin = $surnameLat; GivenLatin = $givenLat; MiddleLatin = $middleLat; SamBase = $samBase; MailLocalBase = $samBase }
-}
-
-function New-PreviewUserRecord {
-    param([Parameter(Mandatory)]$UserItem,[Parameter(Mandatory)][string]$DomainSuffix,[string]$OU,[switch]$CheckUniqueness)
-    $fullName = Normalize-Text $UserItem.fullName
-    if ([string]::IsNullOrWhiteSpace($fullName)) { throw 'Порожнє поле fullName у записі користувача.' }
-    $parts = Split-FullName -FullName $fullName
-    $ids = Build-BaseIdentifiers -NameParts $parts
-    $cn = $fullName; $sam = $ids.SamBase; $mailLocal = $ids.MailLocalBase
-    if ($CheckUniqueness) {
-        $sam = Get-UniqueSamAccountName -BaseSam $sam
-        $mailLocal = Get-UniqueMailLocalPart -BaseLocal $mailLocal -DomainSuffix $DomainSuffix
-        if (-not [string]::IsNullOrWhiteSpace($OU)) { $cn = Get-UniqueCN -BaseCN $cn -OUPath $OU }
-    }
-    [pscustomobject]@{
-        fullName = $fullName
-        surname = $parts.Surname
-        givenName = $parts.GivenName
-        middleName = $parts.MiddleName
-        login = $sam
-        email = "$mailLocal@$DomainSuffix"
-        upn = "$sam@$DomainSuffix"
-        cn = $cn
-        unit = (Normalize-Text $UserItem.unit)
-        sourceRow = $UserItem.sourceRow
-    }
-}
-
-function Invoke-AdUserCreate {
-    param([Parameter(Mandatory)]$Preview,[Parameter(Mandatory)][string]$OU,[Parameter(Mandatory)][string[]]$GroupsToAdd,[bool]$PasswordNeverExpires = $false)
-    $password = Get-RandomPassword
-    $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
-    $newParams = @{
-        Name = $Preview.cn
-        DisplayName = $Preview.fullName
-        GivenName = $Preview.givenName
-        Surname = $Preview.surname
-        SamAccountName = $Preview.login
-        UserPrincipalName = $Preview.upn
-        EmailAddress = $Preview.email
-        Path = $OU
-        Enabled = $true
-        AccountPassword = $securePassword
-    }
-    if ($Preview.middleName) { $newParams['OtherName'] = $Preview.middleName }
-    if ($PasswordNeverExpires) {
-        $newParams['PasswordNeverExpires'] = $true
-        $newParams['ChangePasswordAtLogon'] = $false
-    } else {
-        $newParams['ChangePasswordAtLogon'] = $true
-    }
-    New-ADUser @newParams
-    foreach ($groupSam in $GroupsToAdd) { if ($groupSam) { Add-ADGroupMember -Identity $groupSam -Members $Preview.login -ErrorAction Stop } }
-    [pscustomobject]@{ fullName = $Preview.fullName; login = $Preview.login; email = $Preview.email; password = $password; status = 'created' }
 }
 
 function Get-AdOuOptions {
@@ -179,6 +74,24 @@ function Handle-ApiRequest {
                 $ouData = Get-AdOuOptions
                 $groups = Get-AdGroupOptions
                 Write-JsonResponse -Context $Context -Data ([pscustomobject]@{ ok = $true; domain = $ouData.domainDnsRoot; domainDN = $ouData.domainDN; ous = $ouData.items; groups = $groups })
+                return
+            }
+            'GET /api/password-logs' {
+                Write-JsonResponse -Context $Context -Data ([pscustomobject]@{ ok = $true; items = @(Get-PasswordLogItems) })
+                return
+            }
+            'GET /api/password-logs/file' {
+                $id = Normalize-Text $req.QueryString['id']
+                if ([string]::IsNullOrWhiteSpace($id)) { throw 'id є обов''язковим.' }
+                $downloadRaw = Normalize-Text $req.QueryString['download']
+                $download = $false
+                if (-not [string]::IsNullOrWhiteSpace($downloadRaw)) {
+                    $download = [System.Convert]::ToBoolean($downloadRaw)
+                }
+                $meta = Get-PasswordLogMetaById -Id $id
+                if (-not (Test-Path -LiteralPath ([string]$meta.path))) { throw 'PDF файл на диску не знайдено.' }
+                $pdfBytes = [System.IO.File]::ReadAllBytes([string]$meta.path)
+                Write-BinaryResponse -Context $Context -Bytes $pdfBytes -ContentType 'application/pdf' -FileName ([string]$meta.name) -Download:$download
                 return
             }
             'POST /api/users/preview' {
@@ -220,7 +133,11 @@ function Handle-ApiRequest {
                         $errors.Add([pscustomobject]@{ fullName = (Normalize-Text $u.fullName); sourceRow = $u.sourceRow; error = $_.Exception.Message })
                     }
                 }
-                Write-JsonResponse -Context $Context -Data ([pscustomobject]@{ ok = $true; created = $results.ToArray(); errors = $errors.ToArray() })
+                $pdfLog = $null
+                if (-not $dryRun -and $results.Count -gt 0) {
+                    $pdfLog = Save-PasswordLogPdf -CreatedRows $results.ToArray() -DomainSuffix $domainSuffix -OU $ou
+                }
+                Write-JsonResponse -Context $Context -Data ([pscustomobject]@{ ok = $true; created = $results.ToArray(); errors = $errors.ToArray(); pdfLog = $pdfLog; passwordLogs = @(Get-PasswordLogItems) })
                 return
             }
             default {

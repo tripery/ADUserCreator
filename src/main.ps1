@@ -114,16 +114,16 @@ try {
     $splash = Show-Splash
 
     # Core
-    . "$root\common\Logging.ps1"
-    . "$root\common\Password.ps1"
+    . "$root\core\common\Logging.ps1"
+    . "$root\core\common\Password.ps1"
 
     # AD
-    . "$root\ad\Transliteration.ps1"
-    . "$root\ad\Naming.ps1"
-    . "$root\ad\UserProvision.ps1"
+    . "$root\core\ad\Transliteration.ps1"
+    . "$root\core\ad\Naming.ps1"
+    . "$root\core\ad\UserProvision.ps1"
 
     # Excel
-    . "$root\excel\ExcelImport.ps1"
+    . "$root\core\excel\ExcelImport.ps1"
 
     # UI
     . "$root\ui\SelectOU.ps1"

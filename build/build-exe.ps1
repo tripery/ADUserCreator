@@ -8,7 +8,7 @@ if (-not (Get-Command ps2exe -ErrorAction SilentlyContinue)) {
 $projectRoot = (Resolve-Path '..').Path
 $srcDirCandidate = Join-Path $projectRoot 'src'
 $distDir = Join-Path $projectRoot 'dist'
-$runtimeDirs = @('ad', 'common', 'excel', 'ui')
+$runtimeDirs = @('core', 'ui')
 $runtimeFiles = @('main.ps1')
 
 if (Test-Path (Join-Path $srcDirCandidate 'main.ps1')) {
@@ -80,9 +80,7 @@ if (-not (Test-Path $releaseDir)) {
 $requiredForInstaller = @(
     (Join-Path $distDir 'ADUserCreator.exe'),
     (Join-Path $distDir 'main.ps1'),
-    (Join-Path $distDir 'ad'),
-    (Join-Path $distDir 'common'),
-    (Join-Path $distDir 'excel'),
+    (Join-Path $distDir 'core'),
     (Join-Path $distDir 'ui')
 )
 

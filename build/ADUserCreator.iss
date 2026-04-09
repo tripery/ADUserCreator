@@ -38,9 +38,7 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 [Files]
 Source: "{#SourceDist}\ADUserCreator.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDist}\main.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SourceDist}\ad\*"; DestDir: "{app}\ad"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{#SourceDist}\common\*"; DestDir: "{app}\common"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{#SourceDist}\excel\*"; DestDir: "{app}\excel"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDist}\core\*"; DestDir: "{app}\core"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceDist}\ui\*"; DestDir: "{app}\ui"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "install-prereqs.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
 

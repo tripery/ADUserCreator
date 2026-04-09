@@ -1,0 +1,160 @@
+:root {
+  --bg: #edf3ff;
+  --surface: rgba(255, 255, 255, 0.76);
+  --surface-strong: rgba(255, 255, 255, 0.94);
+  --surface-soft: #f5f8ff;
+  --line: #d6e0f0;
+  --line-strong: #c2d0e6;
+  --text: #18253d;
+  --muted: #667795;
+  --heading: #10203e;
+
+  --sidebar-bg: linear-gradient(180deg, #0f2f67 0%, #0b214d 100%);
+  --sidebar-brand: linear-gradient(135deg, #17438f 0%, #2d6ce1 100%);
+  --sidebar-text: #edf6ff;
+  --sidebar-muted: rgba(237, 246, 255, 0.74);
+  --sidebar-divider: rgba(255, 255, 255, 0.08);
+  --sidebar-hover: rgba(255, 255, 255, 0.08);
+  --sidebar-active: linear-gradient(90deg, rgba(103, 156, 255, 0.32), rgba(103, 156, 255, 0.12));
+  --sidebar-active-border: rgba(255, 255, 255, 0.1);
+  --sidebar-active-text: #f7fbff;
+  --sidebar-note-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-note-border: rgba(255, 255, 255, 0.08);
+
+  --hero-bg: linear-gradient(135deg, rgba(12, 36, 84, 0.96) 0%, rgba(24, 78, 169, 0.93) 54%, rgba(29, 131, 165, 0.88) 100%);
+  --hero-text: #eef6ff;
+  --hero-muted: rgba(238, 246, 255, 0.78);
+
+  --blue: #2d68d6;
+  --blue-soft: rgba(45, 104, 214, 0.12);
+  --green: #21916a;
+  --green-soft: rgba(33, 145, 106, 0.13);
+  --amber: #bc7a19;
+  --amber-soft: rgba(188, 122, 25, 0.14);
+  --red: #bf4d60;
+  --red-soft: rgba(191, 77, 96, 0.12);
+
+  --success: var(--green);
+  --warning: var(--amber);
+  --danger: var(--red);
+  --info: var(--blue);
+
+  --shadow-lg: 0 22px 60px rgba(22, 45, 91, 0.16);
+  --shadow-md: 0 14px 34px rgba(22, 45, 91, 0.1);
+
+  --radius-xl: 28px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+}
+
+[data-theme="dark"] {
+  --bg: #07111f;
+  --surface: rgba(10, 20, 35, 0.74);
+  --surface-strong: rgba(10, 20, 35, 0.92);
+  --surface-soft: #111d30;
+  --line: #23354f;
+  --line-strong: #2d4566;
+  --text: #e5eefb;
+  --muted: #9db0ce;
+  --heading: #f4f8ff;
+
+  --sidebar-bg: linear-gradient(180deg, #07162f 0%, #081b3f 100%);
+  --sidebar-brand: linear-gradient(135deg, #0d2a57 0%, #1b4f9a 100%);
+  --sidebar-text: #edf6ff;
+  --sidebar-muted: rgba(237, 246, 255, 0.74);
+  --sidebar-divider: rgba(255, 255, 255, 0.08);
+  --sidebar-hover: rgba(255, 255, 255, 0.08);
+  --sidebar-active: linear-gradient(90deg, rgba(103, 156, 255, 0.32), rgba(103, 156, 255, 0.12));
+  --sidebar-active-border: rgba(255, 255, 255, 0.1);
+  --sidebar-active-text: #f7fbff;
+  --sidebar-note-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-note-border: rgba(255, 255, 255, 0.08);
+
+  --hero-bg: linear-gradient(135deg, rgba(5, 17, 33, 0.96) 0%, rgba(11, 41, 89, 0.94) 52%, rgba(13, 94, 119, 0.88) 100%);
+  --hero-text: #edf6ff;
+  --hero-muted: rgba(237, 246, 255, 0.74);
+
+  --blue-soft: rgba(78, 129, 226, 0.2);
+  --green-soft: rgba(53, 174, 128, 0.18);
+  --amber-soft: rgba(214, 155, 58, 0.18);
+  --red-soft: rgba(201, 94, 113, 0.18);
+
+  --shadow-lg: 0 26px 62px rgba(0, 0, 0, 0.34);
+  --shadow-md: 0 18px 38px rgba(0, 0, 0, 0.22);
+}
+
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(41, 86, 186, 0.18), transparent 32%),
+    radial-gradient(circle at 82% 18%, rgba(41, 147, 132, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 20%),
+    var(--bg);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  transition:
+    transform 0.18s ease,
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.btn:hover:not(:disabled),
+.theme-toggle:hover:not(:disabled),
+.profile:hover:not(:disabled),
+.menu-item:hover:not(:disabled),
+.table-action:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+input,
+select {
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+
+input:focus,
+select:focus,
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(45, 104, 214, 0.16);
+}

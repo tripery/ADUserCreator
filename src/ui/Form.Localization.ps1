@@ -1,0 +1,55 @@
+function Convert-UiText {
+    param([Parameter(Mandatory = $true)][string]$Base64Text)
+
+    return [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Base64Text))
+}
+
+function Get-MainFormTextMap {
+    return @{
+        LblExcel      = "MSkgRXhjZWwgKCoueGxzeCkg0Lcg0LrQvtC70L7QvdC60LDQvNC4OiDQktGB0YLRg9C/0L3QuNC6LCDQodGC0YDRg9C60YLRg9GA0L3QuNC5INC/0ZbQtNGA0L7Qt9C00ZbQuw=="
+        BtnExcel      = "0JLQuNCx0YDQsNGC0Lgg0YTQsNC50Ls="
+        LblPdf        = "MikgUERGLdGE0LDQudC7INC3INC/0LDRgNC+0LvRj9C80Lg="
+        BtnPdf        = "0JLQuNCx0YDQsNGC0LggUERG"
+        GbSettings    = "Mykg0J3QsNC70LDRiNGC0YPQstCw0L3QvdGPIEFE"
+        LblDomain     = "0JTQvtC80LXQvSDQtNC70Y8gVVBOIC8g0L/QvtGI0YLQuA=="
+        TipDomain     = "0J3QsNC/0YDQuNC60LvQsNC0OiBkb25udS5lZHUudWE="
+        ChkNever      = "0J/QsNGA0L7Qu9GMINC90ZbQutC+0LvQuCDQvdC1INC30LDQutGW0L3Rh9GD0ZTRgtGM0YHRjw=="
+        LblOu         = "T1Ug0LTQu9GPINGA0L7Qt9C80ZbRidC10L3QvdGP"
+        BtnOu         = "0JLQuNCx0YDQsNGC0LggT1U="
+        LblGroups     = "0JPRgNGD0L/QuCAoU2FtQWNjb3VudE5hbWUg0YfQtdGA0LXQtyDQutC+0LzRgyk="
+        TipGroups     = "0JLQstC10LTQuCDQs9GA0YPQv9C4INGH0LXRgNC10Lcg0LrQvtC80YMg0LDQsdC+INC90LDRgtC40YHQvdC4INCS0LjQsdGA0LDRgtC4INCz0YDRg9C/0Lg="
+        BtnGroups     = "0JLQuNCx0YDQsNGC0Lgg0LPRgNGD0L/QuA=="
+        BtnRun        = "0KHQotCS0J7QoNCY0KLQmCDQmtCe0KDQmNCh0KLQo9CS0JDQp9CG0JI="
+        LblLog        = "0JbRg9GA0L3QsNC7INCy0LjQutC+0L3QsNC90L3Rjw=="
+        FilterExcel   = "RXhjZWwg0YTQsNC50LvQuCAoKi54bHN4KXwqLnhsc3h80KPRgdGWINGE0LDQudC70LggKCouKil8Ki4q"
+        FilterPdf     = "UERGINGE0LDQudC70LggKCoucGRmKXwqLnBkZg=="
+        LogOpenExcel  = "0JLRltC00LrRgNC40YLRgtGPIEV4Y2VsOiA="
+        LogSheet      = "0JLQuNC60L7RgNC40YHRgtC+0LLRg9GU0YLRjNGB0Y8g0LvQuNGB0YI6IA=="
+        LogRows       = "0KDRj9C00LrRltCyOiA="
+        LogExcelError = "0J/QvtC80LjQu9C60LAgRXhjZWw6IA=="
+        CapExcelError = "0J/QvtC80LjQu9C60LAgRXhjZWw="
+        LogPdfPath    = "0KjQu9GP0YUg0LTQu9GPIFBERiDQstC40LHRgNCw0L3Qvjog"
+        LogOu         = "T1Ug0LLQuNCx0YDQsNC90L46IA=="
+        LogOuError    = "0J/QvtC80LjQu9C60LAg0LLQuNCx0L7RgNGDIE9VOiA="
+        LogGroups     = "0JPRgNGD0L/QuCDQstC40LHRgNCw0L3Qvjog"
+        LogGroupsErr  = "0J/QvtC80LjQu9C60LAg0LLQuNCx0L7RgNGDINCz0YDRg9C/OiA="
+        MsgNoData     = "0KHQv9C+0YfQsNGC0LrRgyDQstC40LHQtdGA0LggRXhjZWwg0YTQsNC50Lsu"
+        CapNoData     = "0J3QtdC80LDRlCDQtNCw0L3QuNGF"
+        MsgNoOu       = "0JLQuNCx0LXRgNC4IE9VLg=="
+        CapNoOu       = "0J3QtSDQstC40LHRgNCw0L3QviBPVQ=="
+        MsgNoDomain   = "0JLQutCw0LbQuCDQtNC+0LzQtdC9INC00LvRjyBVUE4v0L/QvtGI0YLQuC4="
+        CapNoDomain   = "0J3QtSDQstC60LDQt9Cw0L3QviDQtNC+0LzQtdC9"
+        MsgNoPdf      = "0JLQuNCx0LXRgNC4INGI0LvRj9GFINC00LvRjyBQREYg0YTQsNC50LvRgy4="
+        CapNoPdf      = "0J3QtSDQstC60LDQt9Cw0L3QviBQREY="
+        LogStart      = "0J/QntCn0JDQotCe0Jo6INGB0YLQstC+0YDQtdC90L3RjyDQutC+0YDQuNGB0YLRg9Cy0LDRh9GW0LIu"
+        LogDomain     = "0JTQvtC80LXQvT0="
+        LogGroups2    = "0JPRgNGD0L/QuD0="
+        LogPdfSaved   = "UERGINC3INC/0LDRgNC+0LvRj9C80Lgg0LfQsdC10YDQtdC20LXQvdC+OiA="
+        MsgPdfSaved   = "UERGINC3INC/0LDRgNC+0LvRj9C80Lgg0LfQsdC10YDQtdC20LXQvdC+Lg0KDQo="
+        MsgOpenNow    = "DQoNCtCS0ZbQtNC60YDQuNGC0Lgg0YTQsNC50Lsg0LfQsNGA0LDQtz8="
+        CapPdfSaved   = "UERGINC30LHQtdGA0LXQttC10L3Qvg=="
+        LogPdfCancel  = "0JfQsdC10YDQtdC20LXQvdC90Y8gUERGINGB0LrQsNGB0L7QstCw0L3QviDQutC+0YDQuNGB0YLRg9Cy0LDRh9C10Lwu"
+        LogPdfError   = "0J/QvtC80LjQu9C60LAg0YHRgtCy0L7RgNC10L3QvdGPIFBERjog"
+        CapPdfError   = "0J/QvtC80LjQu9C60LAgUERG"
+    }
+}

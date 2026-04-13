@@ -128,9 +128,15 @@ try {
     $splash = Show-Splash
 
     # Core
+<<<<<<< Updated upstream
     . "$root\core\common\Logging.ps1"
     . "$root\core\common\Password.ps1"
     . "$root\logs\PasswordLogs.ps1"
+=======
+    . "$root\common\Logging.ps1"
+    . "$root\common\Password.ps1"
+    . "$root\common\PasswordPdf.ps1"
+>>>>>>> Stashed changes
 
     # AD
     . "$root\core\ad\Transliteration.ps1"

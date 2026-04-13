@@ -141,6 +141,7 @@ function Create-UsersFromExcelData {
                 SamAccountName    = $sam
                 UserPrincipalName = $upn
                 Mail              = $mail
+                Department        = $department
                 Password          = $plainPassword
                 fullName          = $displayName
                 login             = $sam

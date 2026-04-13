@@ -1,7 +1,9 @@
-﻿function Show-MainForm {
-    Add-Type -AssemblyName System.Windows.Forms
-    Add-Type -AssemblyName System.Drawing
+$formDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $formDir 'Form.Localization.ps1')
+. (Join-Path $formDir 'Form.Layout.ps1')
+. (Join-Path $formDir 'Form.Events.ps1')
 
+<<<<<<< Updated upstream
     function Get-UiText([string]$Encoded) {
         return [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Encoded))
     }
@@ -345,4 +347,11 @@
     })
 
     $null = $form.ShowDialog()
+=======
+function Show-MainForm {
+    $texts = Get-MainFormTextMap
+    $ui = New-MainFormUi -Texts $texts
+    Register-MainFormEvents -Ui $ui -Texts $texts
+    $null = $ui.Form.ShowDialog()
+>>>>>>> Stashed changes
 }

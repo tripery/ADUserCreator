@@ -1,1 +1,18 @@
-ADUserCreator_portable.zip
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/.history/
+
+# Desktop build outputs
+/dist/
+/release/
+/ADUserCreator/*.zip
+
+# Runtime data
+/data/password-logs/
+/exports/
+
+# Logs / temp
+*.log
+*.tmp
+*.temp

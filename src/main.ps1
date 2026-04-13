@@ -29,6 +29,20 @@ function Resolve-AppRoot {
 }
 
 $root = Resolve-AppRoot
+$script:ProjectRoot = if ((Split-Path $root -Leaf) -eq 'src') { Split-Path $root -Parent } else { $root }
+$script:PasswordLogsRoot = Join-Path $script:ProjectRoot 'data\password-logs'
+
+function Ensure-PasswordLogsRoot {
+    if (-not (Test-Path -LiteralPath $script:PasswordLogsRoot)) {
+        New-Item -ItemType Directory -Path $script:PasswordLogsRoot -Force | Out-Null
+    }
+}
+
+function Normalize-Text {
+    param([string]$Value)
+    if ($null -eq $Value) { return '' }
+    return ([string]$Value).Trim()
+}
 
 function Assert-Requirements {
     $requiredModules = @(
@@ -116,6 +130,7 @@ try {
     # Core
     . "$root\core\common\Logging.ps1"
     . "$root\core\common\Password.ps1"
+    . "$root\logs\PasswordLogs.ps1"
 
     # AD
     . "$root\core\ad\Transliteration.ps1"

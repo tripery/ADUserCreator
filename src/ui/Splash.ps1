@@ -3,7 +3,7 @@
     Add-Type -AssemblyName System.Drawing
 
     $splash = New-Object System.Windows.Forms.Form
-    $splash.Text = "AD User Creator"
+    $splash.Text = "ADUserCreator"
     $splash.Size = New-Object System.Drawing.Size(420, 140)
     $splash.StartPosition = "CenterScreen"
     $splash.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog

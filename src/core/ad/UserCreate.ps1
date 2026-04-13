@@ -1,4 +1,4 @@
-function Invoke-AdUserCreate {
+﻿function Invoke-AdUserCreate {
     param([Parameter(Mandatory)]$Preview,[Parameter(Mandatory)][string]$OU,[Parameter(Mandatory)][string[]]$GroupsToAdd,[bool]$PasswordNeverExpires = $false)
     $password = Get-RandomPassword
     $securePassword = ConvertTo-SecureString $password -AsPlainText -Force

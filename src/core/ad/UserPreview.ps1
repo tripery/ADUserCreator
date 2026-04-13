@@ -1,4 +1,4 @@
-function Split-FullName {
+﻿function Split-FullName {
     param([Parameter(Mandatory)][string]$FullName)
     $parts = (Normalize-Text $FullName) -split '\s+' | Where-Object { $_ }
     if ($parts.Count -lt 2) { throw ("Unable to parse fullName '{0}'. Expected at least surname and given name." -f $FullName) }

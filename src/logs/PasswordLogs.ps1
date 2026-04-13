@@ -1,4 +1,4 @@
-function ConvertTo-HtmlEncoded {
+﻿function ConvertTo-HtmlEncoded {
     param([string]$Value)
     return [System.Net.WebUtility]::HtmlEncode((Normalize-Text $Value))
 }
@@ -23,22 +23,71 @@ function Convert-HtmlFileToPdf {
 
     $browserPath = Get-PdfRendererPath
     $htmlUri = [System.Uri]::new($HtmlPath).AbsoluteUri
-    $arguments = @(
-        '--headless=new',
-        '--disable-gpu',
-        '--no-first-run',
-        '--no-default-browser-check',
-        "--print-to-pdf=$PdfPath",
-        $htmlUri
-    )
+    $pdfDir = Split-Path -Parent $PdfPath
+    if (-not (Test-Path -LiteralPath $pdfDir)) {
+        New-Item -ItemType Directory -Path $pdfDir -Force | Out-Null
+    }
 
-    $process = Start-Process -FilePath $browserPath -ArgumentList $arguments -Wait -PassThru -WindowStyle Hidden
-    if ($process.ExitCode -ne 0) {
-        throw "Failed to generate PDF. Browser exit code: $($process.ExitCode)"
+    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('adusercreator-pdf-' + [guid]::NewGuid().ToString('N'))
+    $userDataDir = Join-Path $tempRoot 'profile'
+    $stdoutPath = Join-Path $tempRoot 'stdout.log'
+    $stderrPath = Join-Path $tempRoot 'stderr.log'
+    New-Item -ItemType Directory -Path $userDataDir -Force | Out-Null
+
+    $headlessModes = @('new', 'old')
+    $lastError = $null
+
+    try {
+        foreach ($mode in $headlessModes) {
+            if (Test-Path -LiteralPath $PdfPath) {
+                Remove-Item -LiteralPath $PdfPath -Force -ErrorAction SilentlyContinue
+            }
+            if (Test-Path -LiteralPath $stdoutPath) {
+                Remove-Item -LiteralPath $stdoutPath -Force -ErrorAction SilentlyContinue
+            }
+            if (Test-Path -LiteralPath $stderrPath) {
+                Remove-Item -LiteralPath $stderrPath -Force -ErrorAction SilentlyContinue
+            }
+
+            $arguments = @(
+                "--headless=$mode",
+                '--disable-gpu',
+                '--no-first-run',
+                '--no-default-browser-check',
+                '--allow-file-access-from-files',
+                "--user-data-dir=$userDataDir",
+                "--print-to-pdf=$PdfPath",
+                $htmlUri
+            )
+
+            $process = Start-Process -FilePath $browserPath -ArgumentList $arguments -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+            if ($process.ExitCode -eq 0) {
+                for ($attempt = 0; $attempt -lt 10; $attempt++) {
+                    if ((Test-Path -LiteralPath $PdfPath) -and ((Get-Item -LiteralPath $PdfPath).Length -gt 0)) {
+                        return
+                    }
+                    Start-Sleep -Milliseconds 300
+                }
+            }
+
+            $stderrText = if (Test-Path -LiteralPath $stderrPath) { (Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue).Trim() } else { '' }
+            $stdoutText = if (Test-Path -LiteralPath $stdoutPath) { (Get-Content -LiteralPath $stdoutPath -Raw -ErrorAction SilentlyContinue).Trim() } else { '' }
+            $details = @()
+            if ($stderrText) { $details += "stderr: $stderrText" }
+            if ($stdoutText) { $details += "stdout: $stdoutText" }
+            $detailSuffix = if ($details.Count -gt 0) { ' ' + ($details -join ' | ') } else { '' }
+            $lastError = "PDF generation failed in headless mode '$mode'. Exit code: $($process.ExitCode).$detailSuffix"
+        }
+    } finally {
+        if (Test-Path -LiteralPath $tempRoot) {
+            Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
-    if (-not (Test-Path -LiteralPath $PdfPath)) {
-        throw 'PDF file was not created by the browser.'
+
+    if ($lastError) {
+        throw $lastError
     }
+    throw 'PDF file was not created by the browser.'
 }
 
 function New-PasswordLogHtml {
@@ -133,10 +182,20 @@ function Save-PasswordLogPdf {
     param(
         [Parameter(Mandatory)][object[]]$CreatedRows,
         [Parameter(Mandatory)][string]$DomainSuffix,
-        [Parameter(Mandatory)][string]$OU
+        [Parameter(Mandatory)][string]$OU,
+        [string]$OutputDirectory
     )
 
-    Ensure-PasswordLogsRoot
+    $targetRoot = if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
+        Ensure-PasswordLogsRoot
+        $script:PasswordLogsRoot
+    } else {
+        $resolvedOutput = $OutputDirectory.Trim()
+        if (-not (Test-Path -LiteralPath $resolvedOutput)) {
+            New-Item -ItemType Directory -Path $resolvedOutput -Force | Out-Null
+        }
+        $resolvedOutput
+    }
 
     $rowsWithPasswords = @($CreatedRows | Where-Object { -not [string]::IsNullOrWhiteSpace($_.password) })
     if (-not $rowsWithPasswords.Count) { return $null }
@@ -146,7 +205,7 @@ function Save-PasswordLogPdf {
     $safeDomain = (($DomainSuffix -replace '[^a-zA-Z0-9._-]', '_').Trim('_'))
     if ([string]::IsNullOrWhiteSpace($safeDomain)) { $safeDomain = 'domain' }
     $fileName = "passwords_credentials_${safeDomain}_$id.pdf"
-    $pdfPath = Join-Path $script:PasswordLogsRoot $fileName
+    $pdfPath = Join-Path $targetRoot $fileName
     $metaPath = [System.IO.Path]::ChangeExtension($pdfPath, '.json')
 
     $htmlPath = [System.IO.Path]::ChangeExtension($pdfPath, '.html')

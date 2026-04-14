@@ -116,6 +116,7 @@ try {
     # Core
     . "$root\common\Logging.ps1"
     . "$root\common\Password.ps1"
+    . "$root\common\PasswordPdf.ps1"
 
     # AD
     . "$root\ad\Transliteration.ps1"

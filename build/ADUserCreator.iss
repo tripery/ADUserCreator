@@ -2,7 +2,7 @@
 #define AppExeName "ADUserCreator.exe"
 #define AppPublisher "Local"
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "2.16.8"
 #endif
 
 #ifndef SourceDist
@@ -23,7 +23,7 @@ DefaultDirName={autopf64}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 OutputDir={#OutputDir}
-OutputBaseFilename={#AppName}-Setup-{#AppVersion}
+OutputBaseFilename={#AppName}-Setup-Desktop-{#AppVersion}
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

@@ -1,6 +1,5 @@
 services:
   webui:
-    container_name: adusercreator-webui
     build:
       context: ./webui-react
       dockerfile: Dockerfile
@@ -16,7 +15,6 @@ services:
 
     environment:
       - CHOKIDAR_USEPOLLING=true
-      - WATCHPACK_POLLING=true
 
     extra_hosts:
       - "host.docker.internal:host-gateway"

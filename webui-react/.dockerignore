@@ -2,3 +2,12 @@ node_modules
 dist
 npm-debug.log
 .DS_Store
+.git
+.gitignore
+.vscode
+.idea
+coverage
+.vite
+*.local
+*.tmp
+*.log

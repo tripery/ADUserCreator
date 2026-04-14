@@ -111,13 +111,15 @@ function Ensure-DockerRunning {
 function Start-DockerUi {
     Write-Host "Starting Docker UI..." -ForegroundColor Cyan
     Ensure-DockerRunning
-    Show-UiAccessInfo
     Push-Location $projectRoot
     try {
-        docker compose up --build
+        docker compose up --build -d *> $null
     } finally {
         Pop-Location
     }
+    Show-UiAccessInfo
+    Write-Host "Docker UI is running in background." -ForegroundColor Green
+    Write-Host "Logs: docker compose logs -f webui" -ForegroundColor DarkCyan
 }
 
 Start-ApiServer

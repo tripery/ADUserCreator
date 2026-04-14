@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "adusercreator",
+  "compatibility_date": "2026-04-14",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "webui-react"
+  },
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+}

@@ -1,27 +1,27 @@
 ﻿function Get-MainFormTexts {
     return [ordered]@{
         WindowTitle          = 'ADUserCreator Desktop'
-        ImportTitle          = 'Excel file'
-        ImportHint           = "Вибрати xlsx"
+        ImportTitle          = 'Excel файл'
+        ImportHint           = "Джерело: *.xlsx з колонками 'Вступник' та 'Структурний підрозділ'"
         ExcelButton          = 'Вибрати Excel'
-        PdfFolderLabel       = 'Вибір папки для зберігання паролів у PDF'
+        PdfFolderLabel       = 'Папка для PDF з паролями'
         PdfFolderButton      = 'Вибрати папку'
-        SettingsTitle        = 'AD settings'
-        DomainLabel          = 'Domain for UPN / mail'
+        SettingsTitle        = 'Налаштування AD'
+        DomainLabel          = 'Домен для UPN / пошти'
         DomainTooltip        = 'Наприклад: donnu.edu.ua'
-        PasswordNeverExpires = 'Password ніколи не закінчується'
-        OuLabel              = 'Target OU'
+        PasswordNeverExpires = 'Пароль не має терміну дії'
+        OuLabel              = 'Цільовий OU'
         OuButton             = 'Вибрати OU'
-        GroupsLabel          = 'Groups (SamAccountNames)'
-        GroupsButton         = 'Вибрати Групи'
+        GroupsLabel          = 'Групи (SamAccountName через кому)'
+        GroupsButton         = 'Вибрати групи'
         GroupsTooltip        = "Введіть групи через кому або натисніть 'Вибрати групи'"
         RunButton            = 'Створити користувачів'
-        LogTitle             = 'Execution log'
-        ExcelErrorTitle      = 'Excel error'
-        NoDataTitle          = 'No data'
-        NoOuTitle            = 'No OU'
-        NoDomainTitle        = 'No domain'
-        NoPdfFolderTitle     = 'No PDF folder'
-        PdfErrorTitle        = 'PDF error'
+        LogTitle             = 'Журнал виконання'
+        ExcelErrorTitle      = 'Помилка Excel'
+        NoDataTitle          = 'Немає даних'
+        NoOuTitle            = 'Не вибрано OU'
+        NoDomainTitle        = 'Не вказано домен'
+        NoPdfFolderTitle     = 'Не вибрано папку для PDF'
+        PdfErrorTitle        = 'Помилка PDF'
     }
 }

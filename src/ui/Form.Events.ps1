@@ -9,7 +9,7 @@
 
     $Ui.BtnExcel.Add_Click({
         $dlg = New-Object System.Windows.Forms.OpenFileDialog
-        $dlg.Filter = 'Excel files (*.xlsx)|*.xlsx|All files (*.*)|*.*'
+        $dlg.Filter = 'Excel файли (*.xlsx)|*.xlsx|Усі файли (*.*)|*.*'
         if ($dlg.ShowDialog() -ne 'OK') { return }
 
         $Ui.TxtExcel.Text = $dlg.FileName
@@ -39,7 +39,7 @@
 
         if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
             $Ui.TxtPdfFolder.Text = $dlg.SelectedPath
-            Write-Log "Folder for PDF selected: $($Ui.TxtPdfFolder.Text)" 'OK'
+            Write-Log "Папку для PDF вибрано: $($Ui.TxtPdfFolder.Text)" 'OK'
         }
     })
 
@@ -92,7 +92,7 @@
             $groups = $Ui.TxtGroups.Text.Split(',', [System.StringSplitOptions]::RemoveEmptyEntries) | ForEach-Object { $_.Trim() }
         }
 
-        Write-Log "START: create users. OU=$($Ui.TxtOU.Text), Domain=$($Ui.TxtDomain.Text), Groups=$($groups -join ', ')" 'INFO'
+        Write-Log "СТАРТ: створення користувачів. OU=$($Ui.TxtOU.Text), Domain=$($Ui.TxtDomain.Text), Groups=$($groups -join ', ')" 'INFO'
 
         $result = Create-UsersFromExcelData `
             -Users $script:LoadedUsers `
@@ -111,11 +111,11 @@
                     -OutputDirectory $Ui.TxtPdfFolder.Text
 
                 if ($pdfPath) {
-                    Write-Log "PDF with passwords saved: $pdfPath" 'OK'
+                    Write-Log "PDF з паролями збережено: $pdfPath" 'OK'
                 }
             }
             catch {
-                Write-Log "PDF generation error: $($_.Exception.Message)" 'ERROR'
+                Write-Log "Помилка створення PDF: $($_.Exception.Message)" 'ERROR'
                 [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, $Texts.PdfErrorTitle, 'OK', 'Error') | Out-Null
             }
         }
